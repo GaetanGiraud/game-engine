@@ -8,8 +8,13 @@
 #include <GLFW/glfw3.h>
 
 namespace Hazel {
+
+#define BIND_EVENT_FN(x) std::bind(&Application::x, this, std::placeholders::_1)
+
 	Application::Application()
 	{
+        m_Window = std::unique_ptr<Window>(Window::Create());
+		m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 	}
 
 	Application::~Application()
@@ -18,37 +23,23 @@ namespace Hazel {
 
 	void Application::Run() 
 	{
-        GLFWwindow* window;
+		while (m_Running) {
 
-        if (!glfwInit())
-            return;
+			m_Window->OnUpdate();
+		}
+	}
 
-        /* Create a windowed mode window and its OpenGL context */
-        window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
-        if (!window)
-        {
-            glfwTerminate();
-            return;
-        }
+	void Application::OnEvent(Event& e)
+	{
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
 
-        /* Make the window's context current */
-        glfwMakeContextCurrent(window);
+		HZ_CORE_TRACE("{0}", e);
+	}
 
-        /* Loop until the user closes the window */
-        while (!glfwWindowShouldClose(window))
-        {
-            /* Render here */
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            /* Swap front and back buffers */
-            glfwSwapBuffers(window);
-
-            /* Poll for and process events */
-            glfwPollEvents();
-        }
-
-        glfwTerminate();
-
-        return;
+	bool Application::OnWindowClose(WindowCloseEvent& event)
+	{
+		m_Running = false;
+		return true;
 	}
 }

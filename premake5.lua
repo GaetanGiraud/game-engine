@@ -66,6 +66,7 @@ project "Hazel"
 
 	filter "configurations:Debug"
 		defines "HZ_DEBUG"
+		defines "HZ_CORE_ASSERT"
 		symbols "On"
 		
 	filter "configurations:Release"
