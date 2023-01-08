@@ -3,11 +3,15 @@
 
 #include <Hazel/Application.h>
 
+
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
+
 #include "imgui.h"
 #include "Platform/OpenGL/ImGuiOpenGLRenderer.h"
 
 namespace Hazel {
+
     static ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int key)
     {
         switch (key)
@@ -120,6 +124,8 @@ namespace Hazel {
         default: return ImGuiKey_None;
         }
     }
+
+  
 	ImGuiLayer::ImGuiLayer() 
 		: Layer("ImGui Layer")
 	{
@@ -136,6 +142,30 @@ namespace Hazel {
 		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
 
+        // TEMPORARY: should eventually use Hazel key codes
+        /* io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
+        io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
+        io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
+        io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
+        io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
+        io.KeyMap[ImGuiKey_PageUp] = GLFW_KEY_PAGE_UP;
+        io.KeyMap[ImGuiKey_PageDown] = GLFW_KEY_PAGE_DOWN;
+        io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
+        io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
+        io.KeyMap[ImGuiKey_Insert] = GLFW_KEY_INSERT;
+        io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
+        io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
+        io.KeyMap[ImGuiKey_Space] = GLFW_KEY_SPACE;
+        io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
+        io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
+        io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
+        io.KeyMap[ImGuiKey_C] = GLFW_KEY_C;
+        io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
+        io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
+        io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
+        io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;*/
+
+
         ImGui_ImplOpenGL3_Init("#version 410");
 	}
 	void ImGuiLayer::OnDetach()
@@ -143,7 +173,7 @@ namespace Hazel {
 	}
 	void ImGuiLayer::OnUpdate()
 	{
-       ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& io = ImGui::GetIO();
         Application& app = Application::Get();
         io.DisplaySize = ImVec2(app.getWindow().GetWidth(), app.getWindow().GetHeight()); 
             float time = (float) glfwGetTime();
@@ -162,5 +192,91 @@ namespace Hazel {
 	}
 	void ImGuiLayer::OnEvent(Event& event)
 	{
+        EventDispatcher eventDispatcher(event);
+
+        eventDispatcher.Dispatch<WindowResizeEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnWindowResize));
+        eventDispatcher.Dispatch<KeyPressedEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnKeyPressed));
+        eventDispatcher.Dispatch<KeyReleasedEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnKeyReleased));
+        eventDispatcher.Dispatch<KeyPressedEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnKeyPressed));
+        eventDispatcher.Dispatch<KeyTypedEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnKeyTyped));
+        eventDispatcher.Dispatch<MouseButtonPressedEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnMouseButtonPressed));
+        eventDispatcher.Dispatch<MouseButtonReleasedEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnMouseButtonReleased));
+        eventDispatcher.Dispatch<MouseMovedEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnMouseMoved));
+        eventDispatcher.Dispatch<MouseScrolledEvent>(HZ_BIND_EVENT_FN(ImGuiLayer::OnMouseScrolled));
+
 	}
+    bool ImGuiLayer::OnWindowResize(WindowResizeEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2(e.GetWidth(), e.GetHeight());
+        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+
+        glViewport(0, 0, e.GetWidth(), e.GetHeight());
+        return false;
+    }
+    bool ImGuiLayer::OnKeyPressed(KeyPressedEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        ImGuiKey imgui_key = ImGui_ImplGlfw_KeyToImGuiKey(e.GetKeyCode());
+        io.AddKeyEvent(imgui_key, true);
+
+        io.AddKeyEvent(ImGuiMod_Ctrl, ImGui::IsKeyPressed(ImGuiKey_LeftCtrl) || ImGui::IsKeyPressed(ImGuiKey_RightCtrl));
+        io.AddKeyEvent(ImGuiMod_Shift, ImGui::IsKeyPressed(ImGuiKey_LeftShift) || ImGui::IsKeyPressed(ImGuiKey_RightShift));
+        io.AddKeyEvent(ImGuiMod_Alt, ImGui::IsKeyPressed(ImGuiKey_LeftAlt) || ImGui::IsKeyPressed(ImGuiKey_RightAlt));
+        io.AddKeyEvent(ImGuiMod_Super, ImGui::IsKeyPressed(ImGuiKey_LeftSuper) || ImGui::IsKeyPressed(ImGuiKey_RightSuper));
+
+        return false;
+    }
+    bool ImGuiLayer::OnKeyReleased(KeyReleasedEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        ImGuiKey imgui_key = ImGui_ImplGlfw_KeyToImGuiKey(e.GetKeyCode());
+        io.AddKeyEvent(imgui_key, false);
+
+        return false;
+    }
+    bool ImGuiLayer::OnKeyTyped(KeyTypedEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        unsigned int keyCode = e.GetKeyCode();
+
+        io.AddInputCharacter(keyCode);
+
+        return false;
+    }
+    bool ImGuiLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        
+        io.AddMouseButtonEvent(e.GetMouseButton(), true); 
+
+        return false;
+    }
+    bool ImGuiLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        io.AddMouseButtonEvent(e.GetMouseButton(), false);
+
+        return false;
+    }
+    bool ImGuiLayer::OnMouseMoved(MouseMovedEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        io.AddMousePosEvent(e.GetX(), e.GetY());
+      
+        return false;
+    }
+    bool ImGuiLayer::OnMouseScrolled(MouseScrolledEvent& e)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        io.AddMouseWheelEvent(e.GetXOffset(), e.GetYOffset());
+
+        return false;
+    }
 }
